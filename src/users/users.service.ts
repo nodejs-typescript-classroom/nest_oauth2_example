@@ -1,11 +1,13 @@
 import * as bcrypt from 'bcrypt';
 import {
+  ClassSerializerInterceptor,
   Injectable,
   Logger,
   NotFoundException,
   UnauthorizedException,
+  UseInterceptors,
 } from '@nestjs/common';
-import { User, UserResponseDto } from './user.schema';
+import { User } from './user.schema';
 import { LoginUserDto } from './dtos/loginUser.dto';
 import { GetUserDto } from './dtos/getUser.dto';
 import { CreateUserDto } from './dtos/createUser.dto';
@@ -16,7 +18,7 @@ export class UsersService {
   private users: User[] = [];
   private usesCount = 0;
   async save(user: CreateUserDto) {
-    this.logger.debug({ user });
+    // this.logger.debug({ user });
     const userId = this.usesCount;
     this.usesCount++;
     const passwd = await bcrypt.hash(user.passwd, 10);
@@ -28,10 +30,9 @@ export class UsersService {
     });
     return userId;
   }
-  async validUser(user: LoginUserDto): Promise<UserResponseDto> {
-    this.logger.debug({ user, test: 2 });
+  @UseInterceptors(ClassSerializerInterceptor)
+  async validUser(user: LoginUserDto): Promise<User> {
     const foundUser = this.users.find((u) => u.email == user.email);
-    this.logger.log({ foundUser, user });
     if (!foundUser) {
       throw new NotFoundException({
         message: `user with email ${user.email} not found`,
@@ -44,20 +45,18 @@ export class UsersService {
         message: 'credential is not authorization',
       });
     }
-    delete foundUser.passwd;
-    const filteredResult = foundUser as UserResponseDto;
-    return filteredResult;
+    return new User(foundUser);
   }
-  findAll(): UserResponseDto[] {
-    // const result = this.users as UserResponseDto[];
-    // return result;
-    return this.users.map((u) => ({
-      userId: u.userId,
-      age: u.age,
-      email: u.email,
-    }));
+
+  @UseInterceptors(ClassSerializerInterceptor)
+  findAll(): User[] {
+    return this.users.map((u) => {
+      const user = new User(u);
+      return user;
+    });
   }
-  findUser(dto: GetUserDto): UserResponseDto {
+  @UseInterceptors(ClassSerializerInterceptor)
+  findUser(dto: GetUserDto): User {
     const foundUser = this.users.find((u) => u.userId == dto.userId);
     if (!foundUser) {
       throw new NotFoundException({
@@ -65,8 +64,6 @@ export class UsersService {
         userId: dto.userId,
       });
     }
-    const filteredResult = foundUser as UserResponseDto;
-    delete foundUser.passwd;
-    return filteredResult;
+    return new User(foundUser);
   }
 }

@@ -1,10 +1,12 @@
-export class User {
-  constructor(
-    readonly userId: number,
-    readonly email: string,
-    public passwd: string,
-    readonly age: number,
-  ) {}
-}
+import { Exclude } from 'class-transformer';
 
-export type UserResponseDto = Omit<User, 'passwd'>;
+export class User {
+  userId: number;
+  email: string;
+  age: number;
+  @Exclude()
+  passwd: string;
+  constructor(partial: Partial<User>) {
+    Object.assign(this, partial);
+  }
+}
